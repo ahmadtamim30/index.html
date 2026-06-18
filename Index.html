@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AREZKI - Suivi Pannes</title>
+<style>
+:root{--bg:#f3f5f8;--ink:#101828;--muted:#667085;--card:#fff;--green:#0f766e;--red:#b42318;--amber:#854a0e;--blue:#3538cd}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--ink)}
+.app{max-width:430px;margin:auto;min-height:100vh;background:#f8fafc}
+.top{background:#101828;color:white;padding:18px 16px 14px;border-bottom-left-radius:22px;border-bottom-right-radius:22px;position:sticky;top:0;z-index:9}
+.top h1{font-size:21px;margin:0}.top p{font-size:12px;margin:5px 0 12px;color:#cbd5e1}
+.role{display:flex;gap:8px}.role button{flex:1;background:#263244;color:#dbe4f0;border:1px solid #344054;border-radius:12px;padding:9px 6px;font-size:12px}
+.role button.active{background:#0f766e;color:#fff}
+.page{padding:14px 14px 80px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.card{background:white;border-radius:16px;padding:14px;box-shadow:0 3px 12px #00000012}.card b{font-size:22px}.card span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:white;border-top:1px solid #e5e7eb;display:grid;grid-template-columns:repeat(4,1fr);z-index:10}
+.nav button{background:white;border:0;padding:10px 4px 12px;font-size:11px;color:#667085}.nav button.active{color:#0f766e;font-weight:700}
+.panel{background:white;border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 3px 12px #00000010}
+h2{font-size:17px;margin:0 0 10px}
+input,select,textarea,button{font-size:15px;border-radius:12px;border:1px solid #d0d5dd;padding:11px;width:100%;font-family:inherit}
+textarea{min-height:74px}label{font-size:12px;color:#667085;display:block;margin:8px 0 4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.full{grid-column:1/-1}
+.primary{background:#0f766e;color:white;border:0;font-weight:700}.danger{background:#b42318;color:#fff;border:0}.dark{background:#344054;color:white;border:0}.light{background:#f2f4f7;color:#344054;border:0}
+.item{background:white;border:1px solid #e4e7ec;border-radius:16px;padding:13px;margin-bottom:10px}
+.itemTop{display:flex;justify-content:space-between;gap:8px}.machine{font-weight:700;font-size:16px}.meta{color:#667085;font-size:12px;margin-top:3px;line-height:1.4}
+.badge{border-radius:999px;padding:5px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+.declaree{background:#eef4ff;color:#3538cd}.urgence{background:#fff1c2;color:#854a0e}.approuvee{background:#dcfae6;color:#067647}.rejetee{background:#fee4e2;color:#b42318}.commande{background:#e0f2fe;color:#026aa2}.reparee{background:#ecfdf3;color:#027a48}
+.detail{background:#f8fafc;border-radius:12px;padding:9px;margin-top:8px;font-size:13px;line-height:1.35}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.small{font-size:12px;color:#667085}.hidden{display:none}.search{margin-bottom:10px}
+.totalCost{font-weight:700;color:#0f766e}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <h1>AREZKI • Suivi Pannes</h1>
+    <p>Prototype dynamique téléphone — priorités agences & validation DG</p>
+    <div class="role">
+      <button id="rAgence" class="active" onclick="setRole('agence')">Agence</button>
+      <button id="rDG" onclick="setRole('dg')">DG</button>
+      <button id="rAchat" onclick="setRole('achat')">Achat</button>
+      <button id="rMeca" onclick="setRole('meca')">Mécanique</button>
+    </div>
+  </div>
+
+  <div class="page">
+    <section id="dashboard">
+      <div class="cards">
+        <div class="card"><b id="k1">0</b><span>Machines en panne</span></div>
+        <div class="card"><b id="k2">0</b><span>Urgences agences</span></div>
+        <div class="card"><b id="k3">0</b><span>Validées DG</span></div>
+        <div class="card"><b id="k4">0</b><span>FCFA à payer</span></div>
+      </div>
+      <div class="panel">
+        <h2>Dashboard général DG</h2>
+        <div id="byProject"></div>
+      </div>
+      <div class="panel">
+        <h2>Demandes urgentes à valider</h2>
+        <div id="urgentList"></div>
+      </div>
+    </section>
+
+    <section id="listPage" class="hidden">
+      <select id="filter" class="search" onchange="render()">
+        <option value="">Tous les projets</option>
+      </select>
+      <div id="list"></div>
+    </section>
+
+    <section id="addPage" class="hidden">
+      <div class="panel">
+        <h2>Ajouter une panne</h2>
+        <form id="form">
+          <label>Projet</label><select name="project"><option>Lot 1B</option><option>Lot 3A</option><option>Lot 4A</option><option>Ziguinchor</option><option>Tambacounda</option></select>
+          <div class="grid">
+            <div><label>Machine</label><input name="machine" placeholder="MG72" required></div>
+            <div><label>N° ordre</label><input name="order" placeholder="BC-0251"></div>
+            <div><label>Heures</label><input name="hours" type="number" placeholder="8420"></div>
+            <div><label>Date panne</label><input name="brokenDate" type="date"></div>
+            <div class="full"><label>Pièce cassée / besoin</label><input name="part" placeholder="Pompe hydraulique" required></div>
+            <div class="full"><label>Description exacte</label><textarea name="description" placeholder="Expliquez la panne et l'impact chantier" required></textarea></div>
+            <div class="full"><label>Coût estimé FCFA</label><input name="cost" type="number" placeholder="2500000" required></div>
+          </div>
+          <br><button class="primary">Enregistrer</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="approvalPage" class="hidden">
+      <div class="panel">
+        <h2>Validation Directeur Général</h2>
+        <p class="small">Le DG voit uniquement les demandes choisies comme urgentes par les responsables d’agence.</p>
+      </div>
+      <div id="approvalList"></div>
+    </section>
+  </div>
+
+  <div class="nav">
+    <button id="nDash" class="active" onclick="showPage('dashboard')">Dashboard</button>
+    <button id="nList" onclick="showPage('listPage')">Pannes</button>
+    <button id="nAdd" onclick="showPage('addPage')">Ajouter</button>
+    <button id="nApp" onclick="showPage('approvalPage')">Validation</button>
+  </div>
+</div>
+
+<script>
+let role='agence';
+let data=JSON.parse(localStorage.getItem('arezkiPannesV2')||'null')||[
+{id:1,project:'Lot 4A',machine:'MG72',order:'BC-0245',hours:8420,brokenDate:'2026-06-18',part:'Fuite huile moteur',description:'Fuite importante. Machine arrêtée, impact terrassement.',cost:1850000,status:'urgence'},
+{id:2,project:'Lot 3A',machine:'CA296',order:'BC-0246',hours:6210,brokenDate:'2026-06-17',part:'Système freinage',description:'Frein faible. Risque sécurité chantier.',cost:2750000,status:'declaree'},
+{id:3,project:'Lot 1B',machine:'Vogele 1900-2',order:'BC-0247',hours:5100,brokenDate:'2026-06-16',part:'Capteur table finisher',description:'Table instable, bloque les travaux enrobés.',cost:3900000,status:'approuvee'},
+{id:4,project:'Lot 4A',machine:'D8GC',order:'BC-0248',hours:9300,brokenDate:'2026-06-15',part:'Flexible hydraulique',description:'Perte pression hydraulique.',cost:1200000,status:'commande'}
+];
+const statusName={declaree:'Panne déclarée',urgence:'Urgence agence',approuvee:'Approuvée DG',rejetee:'Rejetée',commande:'Commande / Paiement',reparee:'Réparée'};
+function money(n){return Number(n||0).toLocaleString('fr-FR')}
+function save(){localStorage.setItem('arezkiPannesV2',JSON.stringify(data))}
+function setRole(r){role=r;['Agence','DG','Achat','Meca'].forEach(x=>document.getElementById('r'+x).classList.remove('active'));document.getElementById('r'+(r=='dg'?'DG':r=='achat'?'Achat':r=='meca'?'Meca':'Agence')).classList.add('active');render()}
+function showPage(p){['dashboard','listPage','addPage','approvalPage'].forEach(x=>document.getElementById(x).classList.add('hidden'));document.getElementById(p).classList.remove('hidden');['Dash','List','Add','App'].forEach(x=>document.getElementById('n'+x).classList.remove('active'));document.getElementById(p=='dashboard'?'nDash':p=='listPage'?'nList':p=='addPage'?'nAdd':'nApp').classList.add('active');render()}
+function item(x){
+ let actions='';
+ if(role=='agence'&&x.status=='declaree')actions+=`<button class="primary" onclick="st(${x.id},'urgence')">Choisir urgent</button>`;
+ if(role=='dg'&&x.status=='urgence')actions+=`<button class="primary" onclick="st(${x.id},'approuvee')">Approuver</button><button class="danger" onclick="st(${x.id},'rejetee')">Rejeter</button>`;
+ if(role=='achat'&&x.status=='approuvee')actions+=`<button class="primary" onclick="st(${x.id},'commande')">Marquer commandé</button>`;
+ if(role=='meca'&&x.status=='commande')actions+=`<button class="primary" onclick="st(${x.id},'reparee')">Marquer réparée</button>`;
+ actions+=`<button class="light" onclick="del(${x.id})">Supprimer</button>`;
+ return `<div class="item"><div class="itemTop"><div><div class="machine">${x.project} — ${x.machine}</div><div class="meta">Ordre: ${x.order||'-'} • Heures: ${x.hours||'-'} • Date: ${x.brokenDate||'-'}</div></div><span class="badge ${x.status}">${statusName[x.status]}</span></div><div class="detail"><b>Pièce:</b> ${x.part}<br><b>Description:</b> ${x.description}<br><b>Coût:</b> <span class="totalCost">${money(x.cost)} FCFA</span></div><div class="actions">${actions}</div></div>`
+}
+function render(){
+ document.getElementById('k1').textContent=data.filter(x=>x.status!='reparee').length;
+ document.getElementById('k2').textContent=data.filter(x=>x.status=='urgence').length;
+ document.getElementById('k3').textContent=data.filter(x=>x.status=='approuvee').length;
+ document.getElementById('k4').textContent=money(data.filter(x=>['urgence','approuvee','commande'].includes(x.status)).reduce((a,b)=>a+Number(b.cost||0),0));
+ let projects=[...new Set(data.map(x=>x.project))].sort();
+ let f=document.getElementById('filter'), cur=f.value; f.innerHTML='<option value="">Tous les projets</option>'+projects.map(p=>`<option ${p==cur?'selected':''}>${p}</option>`).join('');
+ document.getElementById('byProject').innerHTML=projects.map(p=>{let rows=data.filter(x=>x.project==p);let cost=rows.reduce((a,b)=>a+Number(b.cost||0),0);return `<div class="detail"><b>${p}</b><br>${rows.length} pannes • ${money(cost)} FCFA estimé</div>`}).join('');
+ let urgent=data.filter(x=>x.status=='urgence');
+ document.getElementById('urgentList').innerHTML=urgent.map(item).join('')||'<p class="small">Aucune urgence agence.</p>';
+ document.getElementById('approvalList').innerHTML=urgent.map(item).join('')||'<div class="panel small">Aucune demande en attente de validation DG.</div>';
+ let rows=data.filter(x=>!cur||x.project==cur);
+ document.getElementById('list').innerHTML=rows.map(item).join('');
+}
+function st(id,s){data=data.map(x=>x.id==id?{...x,status:s}:x);save();render()}
+function del(id){if(confirm('Supprimer cette ligne ?')){data=data.filter(x=>x.id!=id);save();render()}}
+document.getElementById('form').onsubmit=e=>{e.preventDefault();let x=Object.fromEntries(new FormData(e.target).entries());x.id=Date.now();x.status='declaree';x.cost=Number(x.cost||0);data.unshift(x);save();e.target.reset();showPage('listPage')};
+render();
+</script>
+</body>
+</html>
